@@ -10,7 +10,7 @@ import java.util.*;
 /**
  * Created by dog on 12/19/16.
  *
- * @author dogHere@tutamail.com
+ * @author dogHere@tutamail.com:
  *         <p>
  *         Table
  */
@@ -167,6 +167,9 @@ public class T<S> extends Buffer {
 //        }
 //    }
 
+    public int size(){
+        return position();
+    }
 
     public static T makeByPairColumn(HashMap<Object, Object> c1c2, F f,
                                      String fieldName1, String fieldName2, int size) {

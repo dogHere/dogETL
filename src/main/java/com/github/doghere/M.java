@@ -3,6 +3,7 @@ package com.github.doghere;
 
 import com.github.doghere.util.Format;
 import com.github.doghere.util.Log;
+import com.github.doghere.util.Status;
 import com.github.doghere.util.Type;
 
 import java.io.InputStream;
@@ -28,6 +29,59 @@ public class M {
     private Statement statement;
     private Connection conn;
 
+    private Status status = Status.NOT_READY;
+
+    /**
+     * to count read times
+     */
+    private int readTimes = 0;
+    private volatile boolean keepReading = true;
+
+
+    public int getReadTimes() {
+        return readTimes;
+    }
+
+    public synchronized void setReadTimes(int readTimes) {
+        this.readTimes = readTimes;
+    }
+
+    /**
+     * To change read status
+     * @param status
+     */
+    public void setStatus(Status status) {
+
+        synchronized (this) {
+            this.notifyAll();
+            this.status = status;
+        }
+
+    }
+
+    /**
+     * To get status
+     * @return
+     */
+    public Status getStatus() {
+        return this.status;
+    }
+
+
+    /**
+     * To stop reading,maybe this method cat not stop reading immediately.
+     */
+    public void stopReading() {
+        keepReading = false;
+    }
+
+    /**
+     * To get reading status.
+     * @return boolean
+     */
+    public boolean isKeepReading() {
+        return keepReading;
+    }
 
     /**
      * Init Model with a Connection .
@@ -39,11 +93,11 @@ public class M {
     }
 
 
-
     /**
      * Init a model.
      */
-    public M(){}
+    public M() {
+    }
 
     /**
      * read data from db to table
@@ -54,39 +108,40 @@ public class M {
      * @throws SQLException
      */
     public M read(String sql, T<String> table) throws SQLException {
-        if(this.conn==null) throw new RuntimeException("Connection is null!");
-        return read(sql,table,this.conn);
+        if (this.conn == null) throw new RuntimeException("Connection is null!");
+        return read(sql, table, this.conn);
     }
 
     /**
-     * read db from input stream to table with format 
+     * read db from input stream to table with format
+     *
      * @param Table
      * @param inputStream
      * @param format
      * @return
      */
-    private M read(T <String> Table, InputStream inputStream,Format format){
+    private M read(T<String> Table, InputStream inputStream, Format format) {
         return this;//// TODO: 1/17/17 read db from input stream to table with format
     }
 
     /**
      * read data  to table from a db connection
      *
-     * @param sql sql
-     * @param table Table
+     * @param sql        sql
+     * @param table      Table
      * @param connection Connection
      * @return self
      * @throws SQLException
      */
-    public M read(String sql,T <String> table,Connection connection,int limit) throws SQLException {
+    public M read(String sql, T<String> table, Connection connection, int limit) throws SQLException {
         this.statement = connection.createStatement();
 //        ((com.mysql.jdbc.Statement)statement).enableStreamingResults();
-        if(limit==-1){
+        if (limit == -1) {
             rs = statement.executeQuery(sql);
-        }else{
+        } else {
             if (!sql.contains("limit")) {
                 rs = statement.executeQuery(sql + " limit " + limit);
-            }else{
+            } else {
                 rs = statement.executeQuery(sql);
             }
         }
@@ -95,19 +150,95 @@ public class M {
 //        else {
 //        }
 
-        setField(table);
+        table.setF(getField());
         setTable(table);
         this.rs.close();
         this.statement.close();
         return this;
     }
 
-    public M read(String sql,T<String> table,Connection connection)throws SQLException{
-        read(sql,table,connection,-1);
+    /**
+     * Read to queue
+     * @param sql
+     * @param queue
+     * @param connection
+     * @return self
+     * @throws SQLException
+     * @throws InterruptedException
+     */
+    public M read(String sql, Q queue, Connection connection) throws SQLException, InterruptedException {
+
+//        this.statement = connection.createStatement();
+        this.statement = connection.createStatement(ResultSet.TYPE_FORWARD_ONLY,
+                ResultSet.CONCUR_READ_ONLY);
+        this.statement.setFetchSize(Integer.MIN_VALUE);
+        this.rs = statement.executeQuery(sql);
+        F f = getField();
+        queue.setF(f);
+
+
+        Thread t = new Thread() {
+            public void run() {
+                setStatus(Status.READING);
+
+                while (keepReading) {
+
+                    R r = new R(f);
+                    try {
+                        if (setRow(r, f)) {
+                            if (keepReading) {
+                                queue.put(r);
+                                setReadTimes(getReadTimes() + 1);
+                            }
+                        } else {
+                            setStatus(Status.READ_OUT);
+
+                            rs.close();
+                            statement.close();
+                            break;
+                        }
+                    } catch (SQLException e) {
+                        e.printStackTrace();
+                        setStatus(Status.READ_ERR);
+                        try {
+                            rs.close();
+                            statement.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                        setStatus(Status.READ_ERR);
+                        try {
+                            rs.close();
+                            statement.close();
+                        } catch (SQLException e1) {
+                            e1.printStackTrace();
+                        }
+                    }
+                }
+                setStatus(Status.READ_OUT);
+            }
+        };
+
+        t.start();
+
         return this;
+
     }
 
-
+    /**
+     *
+     * @param sql
+     * @param table
+     * @param connection
+     * @return
+     * @throws SQLException
+     */
+    public M read(String sql, T<String> table, Connection connection) throws SQLException {
+        read(sql, table, connection, -1);
+        return this;
+    }
 
 
     /**
@@ -120,17 +251,17 @@ public class M {
     private M setTable(T<String> table) throws SQLException {
 
         while (true) {
-            if(table.hasRemaining()){
-                if(!setRow((R<String, Comparable>) table.get(), table.getF())){
+            if (table.hasRemaining()) {
+                if (!setRow((R<String, Comparable>) table.get(), table.getF())) {
                     table.down();
                     break;
                 }
-            }else{
+            } else {
                 boolean hasNext = rs.next();
-                if(hasNext){
+                if (hasNext) {
                     table.extend(table.capacity() / 2);
                     rs.previous();
-                }else {
+                } else {
                     break;
                 }
             }
@@ -141,15 +272,7 @@ public class M {
     }
 
 
-    /**
-     * To set Field
-     *
-     * @param table
-     * @return self
-     * @throws SQLException
-     */
-    private M setField(T<String> table) throws SQLException {
-
+    private F getField() throws SQLException {
         if (this.rs == null) throw new SQLException("Err:ResultSet is Null");
 
         ResultSetMetaData metaData = rs.getMetaData();
@@ -163,9 +286,8 @@ public class M {
             Class c = Type.dbJava.get(tN);
             f.setType(fieldName, c);
         }
-        table.setF(f);
+        return f;
 
-        return this;
     }
 
     /**
@@ -178,6 +300,9 @@ public class M {
      */
     private boolean setRow(R<String, Comparable> row, F<String, Class<?>> f) throws SQLException {
 
+        if (rs.isClosed()) {
+            return false;
+        }
         if (this.rs == null)
             throw new SQLException("Err:ResultSet is Null");
 
@@ -221,8 +346,8 @@ public class M {
                     row.setColumn(fieldName, rs.getByte(i));
                 } else if (c.equals(Boolean.class)) {
                     row.setColumn(fieldName, rs.getBoolean(i));
-                } else if(c.equals(Short.class)){
-                    row.setColumn(fieldName,rs.getShort(i));
+                } else if (c.equals(Short.class)) {
+                    row.setColumn(fieldName, rs.getShort(i));
                 }
 
             }
@@ -416,56 +541,56 @@ public class M {
         if (c.equals(String.class)) {
             String v = value == null ? null : (String) value;
 
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setString(col, v);
             }
         } else if (c.equals(Integer.class)) {
 
             Integer v = value == null ? null : (Integer) value;
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setInt(col, v);
             }
         } else if (c.equals(Long.class)) {
             Long v = value == null ? null : (Long) value;
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setLong(col, v);
             }
 
         } else if (c.equals(Short.class)) {
             Short v = value == null ? null : (Short) value;
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setShort(col, v);
             }
 
         } else if (c.equals(Byte.class)) {
             Byte v = value == null ? null : (Byte) value;
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setByte(col, v);
             }
 
         } else if (c.equals(BigDecimal.class)) {
             BigDecimal v = value == null ? null : (BigDecimal) value;
-            if(v==null){
+            if (v == null) {
                 statement.setObject(col, null);
-            }else {
+            } else {
                 statement.setBigDecimal(col, v);
             }
 
         } else if (c.equals(BigInteger.class)) {
             BigInteger v = value == null ? null : (BigInteger) value;
-            if(v!=null) {
+            if (v != null) {
                 statement.setBigDecimal(col, new BigDecimal(v));
-            }else{
+            } else {
 
                 statement.setObject(col, v);
             }
@@ -575,7 +700,7 @@ public class M {
      * @return
      * @throws SQLException
      */
-    public M write(T<String> table, String tableName, Set<String> primaryKeys, Set<String> fields,Connection connection) throws SQLException {
+    public M write(T<String> table, String tableName, Set<String> primaryKeys, Set<String> fields, Connection connection) throws SQLException {
 
         Set<String> newFields = fields.size() == 0 ? table.getF().keySet() : fields;
 
@@ -643,9 +768,7 @@ public class M {
             connection.commit();
         } catch (SQLException e) {
             connection.rollback();
-            Log.getLogger().error(selectStatement);
-            Log.getLogger().error(insertStatement);
-            Log.getLogger().error(updateStatement);
+            Log.getLogger().error("ERROR",e);
             throw new SQLException(e);
         } finally {
             if (insertStatement != null && !insertStatement.isClosed()) {
@@ -673,8 +796,8 @@ public class M {
      * @throws SQLException
      */
     public M write(T<String> table, String tableName, Set<String> primaryKeys, Set<String> fields) throws SQLException {
-        if(this.conn==null)throw new RuntimeException("Connection is null !");
-        return write(table,tableName,primaryKeys,fields,this.conn);
+        if (this.conn == null) throw new RuntimeException("Connection is null !");
+        return write(table, tableName, primaryKeys, fields, this.conn);
     }
 
 
@@ -687,23 +810,23 @@ public class M {
      * @param outputStream
      * @return
      */
-    private M write(T<String> table, String tableName, Set<String> fields, OutputStream outputStream, Format format){
+    private M write(T<String> table, String tableName, Set<String> fields, OutputStream outputStream, Format format) {
         StringBuffer buffer = new StringBuffer();
-        fields = (fields==null || fields.size()==0 )?table.getF().keySet():fields;
+        fields = (fields == null || fields.size() == 0) ? table.getF().keySet() : fields;
 
-        if(format.equals(Format.JSON)||format.equals(Format.JSON_ARRAY_FIELD)){
+        if (format.equals(Format.JSON) || format.equals(Format.JSON_ARRAY_FIELD)) {
 
             table.flip();
-            while (table.hasRemaining()){
+            while (table.hasRemaining()) {
                 R<String, Comparable> row = (R<String, Comparable>) table.get();
 
-                fields.forEach(k->{
+                fields.forEach(k -> {
                     row.getColumn(k);
                 });
             }
-        }else if(format.equals(Format.CSV)||format.equals(Format.CSV_WITHOUT_HEAD)){
+        } else if (format.equals(Format.CSV) || format.equals(Format.CSV_WITHOUT_HEAD)) {
 
-        }else {
+        } else {
             ////todo:write :default gave a WARNING and  output to stdout with format csv.
         }
 
