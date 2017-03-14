@@ -1,5 +1,7 @@
 ## Example 
 
+**Without queue:**
+
 ```java
 
 M model = new M(from); //from:Connection
@@ -9,21 +11,71 @@ model.read(
 ,table);
 
 
-T newTable  = new T(table.position())
-                .setF(table.getF());
+T newTable  = new T(table.position());
 table.flip();//flip
 while (table.hasRemaining()){
     R<String,Object> row = (R<String, Object>) table.get();
     //deal with row
     ...
     newTable.put(row);
-    
 }
 
 model.write(newTable,"result",H.make("name"),H.make(),to);//newTable:T;table name;primary key;fields;to:Connection
 
 ```
 
+**With queue:**
+
+```java
+
+M model = new M();
+T table = null; //init size
+Q q = new Q();//queue
+model.read(
+    "select name,sum(socre) as total from test where score>10 group by name "
+,q,from); //from:Connection
+
+
+while ((table=q.fetch(3000,model)).size()!=0){
+    T newTable  = new T(table.position());
+    table.flip();//flip
+    while (table.hasRemaining()){
+        R<String,Object> row = (R<String, Object>) table.get();
+        //deal with row
+        ...
+        newTable.put(row);
+        
+    }
+    model.write(newTable,"result",H.make("name"),H.make(),to);//newTable:T;table name;primary key;fields;to:Connection
+}
+
+
+```
+
+
+**Deal with rows**
+
+```
+model.read(
+    "select id,url  from user_data "
+,table);
+
+T newTable  = new T(table.position());
+while (table.hasRemaining()){
+    R<String,Object> row = (R<String, Object>) table.get();
+
+    R<String,Object> newRow = new R<>();
+    nowRow.setColumn(row)
+            .setColumn("protocol",protocol,String.class)
+            .setColumn("path",path,String.class)
+            .setColumn("host",host,String.class)
+            .setColumn("query",query,String.class)
+            .setColumn("ref",ref,String.class)
+            .removeColumn("url");
+    newTable.put(row);
+}
+model.write(newTable,"result",H.make("id"),H.make("id","protocol","path","host","query","ref"),to);//newTable:T;table name;primary key;fields;to:Connection
+```
 ## License 
 
 ```

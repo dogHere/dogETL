@@ -82,9 +82,13 @@ public class Q<E> extends LinkedBlockingQueue<E> {
         int tryTimes = 0;
         while (t.capacity() - t.position() >= 0) {
 
-            if (put >= size) return t;
+            if (put >= size) {
+                m.stopReading();
+                return t;
+            }
             if (m.getStatus().equals(Status.READ_OUT)) {
                 if (this.size() == 0) {
+                    m.stopReading();
                     return t;
 
                 } else {
@@ -117,6 +121,7 @@ public class Q<E> extends LinkedBlockingQueue<E> {
                 }
             }
         }
+        m.stopReading();
         return t;
     }
 
