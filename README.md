@@ -53,9 +53,9 @@ while ((table=q.fetch(3000,model)).size()!=0){
 ```
 
 
-**Deal with rows**
+**Deal with rows:**
 
-```
+```java
 model.read(
     "select id,url  from user_data "
 ,table);
