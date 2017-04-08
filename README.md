@@ -5,34 +5,34 @@
 
 ```java
 
-int POOL_SIZE = 4; // how many writer threads 
-DataSource dataSource = // data source 
 
 // create single reader
+
 Reader reader = new JDBCReader()
                 .setConnection(dataSource.getConnection())
                 .setSQL("select uid,count(distinct event_id) as pv from logs where app_id='dog_here' group by uid limit 2000000");
 
 
 // create writers
-Writer [] writers = new Writer[POOL_SIZE];
-for(int i=0;i<POOL_SIZE;i++) {
-    writers[i] = new JDBCWriter<Row>() {
+
+Writer [] writers = new JDBCWriter<Row>() {
         @Override
         public Row dealWithEach(Row row) {
             // deal with ecah row here
             return row;
         }
     }.setTarget("rpt_pv_by_uid")//target table name
-            .setConnection(dataSource.getConnection())
-            .setPrimaryKeys("uid");//target table primary keys,split with `,`
-}
+        .setPrimaryKeys("uid")//target table primary keys,split with `,`
+        .setWriterSize(POOL_SIZE)
+        .setDataSource(dataSource)
+        .create();
+
+// transform
 
 new Model() //new model
-        .setReader(reader) //set reader
-        .setWriter(writers) //set writers
+        .setReader(reader) 
+        .setWriter(writers) 
         .setFactory(new RowFactory()) //set row factory to create row instances
-        .setRingBufferSize((int) Math.pow(2,12)) //set ring buffer size
         .start(); 
 ```
 ## License 

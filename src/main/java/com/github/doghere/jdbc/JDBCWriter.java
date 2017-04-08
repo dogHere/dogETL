@@ -3,6 +3,7 @@ package com.github.doghere.jdbc;
 import com.github.doghere.Each;
 import com.github.doghere.Writer;
 
+import javax.sql.DataSource;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.sql.*;
@@ -12,7 +13,11 @@ import java.util.*;
 /**
  * Created by dog on 4/6/17.
  */
-abstract public class JDBCWriter<E> implements Writer<E>,Each<E>{
+abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
+
+
+    private DataSource dataSource;
+    private int writerSize;
     private Connection connection;
     private String target;
     private Set<String> primaryKeys;
@@ -503,4 +508,37 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>{
     }
 
     abstract public E dealWithEach(E e);
+
+
+    public DataSource getDataSource() {
+        return dataSource;
+    }
+
+    public JDBCWriter setDataSource(DataSource dataSource) {
+        this.dataSource = dataSource;
+        return this;
+    }
+
+    public int getWriterSize() {
+        return writerSize;
+    }
+
+    public JDBCWriter setWriterSize(int writerSize) {
+        this.writerSize = writerSize;
+        return this;
+    }
+
+    public  Writer<E>[] create() throws SQLException, CloneNotSupportedException {
+        if(dataSource==null) throw new  RuntimeException("dataSource can not be null !");
+        Writer<E> [] writers = new Writer[writerSize];
+        for(int i=0;i<writerSize;i++) {
+            writers[i] = this.clone().setConnection(dataSource.getConnection());
+        }
+        return writers;
+    }
+
+    @Override
+    public JDBCWriter<E> clone() throws CloneNotSupportedException {
+        return (JDBCWriter<E>)super.clone();
+    }
 }
