@@ -1,4 +1,4 @@
-package com.github.doghere;
+package com.github.doghere.jdbc;
 
 import java.util.ArrayList;
 
@@ -11,15 +11,15 @@ import java.util.ArrayList;
  *         This is the Row model of Db.
  *         <br><br>
  */
-public class R<S, E> extends ArrayList<E> {
-    private F<S, Class<?>> f;
+public class Row<S, E> extends ArrayList<E> {
+    private Field<S, Class<?>> field;
     private Object lock = new Object();
 
     /**
-     * Init a R default with a F
+//     * Init a Row default with a Field
      */
-    public R() {
-        this(new F<S, Class<?>>());
+    public Row() {
+//        this(new Field<S, Class<?>>());
     }
 
     /**
@@ -27,12 +27,12 @@ public class R<S, E> extends ArrayList<E> {
      * <p>
      * The size is to init the arrayList.
      *
-     * @param f    Field
+     * @param field    Field
      * @param size the number of init column
      */
-    public R(F<S, Class<?>> f, int size) {
+    public Row(Field<S, Class<?>> field, int size) {
         super(size);
-        this.f = f;
+        this.field = field;
         setNull(size);
     }
 
@@ -41,10 +41,10 @@ public class R<S, E> extends ArrayList<E> {
      * <p>
      * Default size is the Field size.
      *
-     * @param f Field
+     * @param field Field
      */
-    public R(F<S, Class<?>> f) {
-        this(f, f.size());
+    public Row(Field<S, Class<?>> field) {
+        this(field, field.size());
     }
 
     private void setNull(int size) {
@@ -54,13 +54,20 @@ public class R<S, E> extends ArrayList<E> {
     }
 
 
+
+    public Row<S,E> setField(Field<S,Class<?>> field){
+        this.field = field;
+        setNull(field.size());
+        return this;
+    }
+
     /**
      * To get Field
      *
      * @return Field
      */
-    public F<S, Class<?>> getF() {
-        return this.f;
+    public Field<S, Class<?>> getField() {
+        return this.field;
     }
 
 
@@ -73,7 +80,7 @@ public class R<S, E> extends ArrayList<E> {
      * @param e     new column value
      * @return self
      */
-    public R<S, E> setColumn(int index, E e) {
+    public Row<S, E> setColumn(int index, E e) {
         if (index < this.size()) {
             synchronized (this) {
                 this.set(index, e);
@@ -94,19 +101,19 @@ public class R<S, E> extends ArrayList<E> {
      * @param e         column value
      * @return self
      */
-    public R<S, E> setColumn(S fieldName, E e) {
+    public Row<S, E> setColumn(S fieldName, E e) {
 
-        if (this.f.containsKey(fieldName)) {
+        if (this.field.containsKey(fieldName)) {
             synchronized (this) {
                 if (e == null) {
-                    this.set(this.f.getNumber(fieldName), e);
-                } else if (e != null && e.getClass().equals(this.f.getType(fieldName))) {
-                    this.set(this.f.getNumber(fieldName), e);
+                    this.set(this.field.getNumber(fieldName), e);
+                } else if (e != null && e.getClass().equals(this.field.getType(fieldName))) {
+                    this.set(this.field.getNumber(fieldName), e);
                 } else
-                    throw new RuntimeException("type `" + e.getClass() + "` of value `" + e + "` not matched `" + this.f.getType(fieldName) + "`");
+                    throw new RuntimeException("type `" + e.getClass() + "` of value `" + e + "` not matched `" + this.field.getType(fieldName) + "`");
             }
         } else
-            throw new RuntimeException("f name `" + fieldName + "` not found!");
+            throw new RuntimeException("field name `" + fieldName + "` not found!");
         return this;
     }
 
@@ -121,12 +128,12 @@ public class R<S, E> extends ArrayList<E> {
      * @param c         column type
      * @return self
      */
-    public R<S, E> setColumn(S fieldName, E e, Class<?> c) {
+    public Row<S, E> setColumn(S fieldName, E e, Class<?> c) {
         synchronized (lock) {
-            if (!this.f.hasName(fieldName)) {
+            if (!this.field.hasName(fieldName)) {
                 this.add(null);
             }
-            this.f.setType(fieldName, c);
+            this.field.setType(fieldName, c);
             this.setColumn(fieldName, e);
         }
         return this;
@@ -139,8 +146,8 @@ public class R<S, E> extends ArrayList<E> {
      * @return column value
      */
     public E getColumn(S fieldName) {
-        if(f.containsKey(fieldName)) {
-            int num = this.f.getNumber(fieldName);
+        if(field.containsKey(fieldName)) {
+            int num = this.field.getNumber(fieldName);
             E e = this.get(num);
             return e;
         }else {
@@ -158,16 +165,17 @@ public class R<S, E> extends ArrayList<E> {
     }
 
     /**
-     * To set column from R.<br><br>
+     * To set column from Row.<br><br>
      * <p>
      * This method will update the old value and field,add new value and field.
      *
-     * @param r R
+     * @param row Row
      * @return self
      */
-    public R<S, E> setColumn(R<S, E> r) {
-        r.f.keySet().forEach(name -> {
-            this.setColumn(name, r.getColumn(name), r.f.getType(name));
+    public Row<S, E> setColumn(Row<S, E> row) {
+        if(this.field==null) this.setField( row.field);
+        row.field.keySet().forEach(name -> {
+            this.setColumn(name, row.getColumn(name), row.field.getType(name));
         });
         return this;
     }
@@ -179,12 +187,13 @@ public class R<S, E> extends ArrayList<E> {
      * @param fieldName field name
      * @return self
      */
-    public R<S, E> removeColumn(S fieldName) {
+    @Deprecated
+    public Row<S, E> removeColumn(S fieldName) {
         synchronized (lock) {
-            if(f.containsKey(fieldName)) {
-                int num = f.getNumber(fieldName);
+            if(field.containsKey(fieldName)) {
+                int num = field.getNumber(fieldName);
                 this.remove(num);
-                this.f.removeColumn(fieldName);
+                this.field.removeColumn(fieldName);
             }
         }
         return this;
@@ -198,7 +207,7 @@ public class R<S, E> extends ArrayList<E> {
      * @param fieldNames field names
      * @return self
      */
-    public R<S, E> removeColumn(S... fieldNames) {
+    public Row<S, E> removeColumn(S... fieldNames) {
         for (S s : fieldNames) {
             removeColumn(s);
         }
@@ -213,15 +222,15 @@ public class R<S, E> extends ArrayList<E> {
      * @return field number
      */
     public E getNumber(S fieldName) {
-        return this.get(this.f.getNumber(fieldName));
+        return this.get(this.field.getNumber(fieldName));
     }
 
 
-    public static R makeByPair(F f, String fieldName1, String fieldName2, Object v1, Object v2) {
-        R r = new R(f, f.size());
-        r.setColumn(fieldName1, v1);
-        r.setColumn(fieldName2, v2);
-        return r;
+    public static Row makeByPair(Field field, String fieldName1, String fieldName2, Object v1, Object v2) {
+        Row row = new Row(field, field.size());
+        row.setColumn(fieldName1, v1);
+        row.setColumn(fieldName2, v2);
+        return row;
     }
 
     @Override
@@ -247,57 +256,57 @@ public class R<S, E> extends ArrayList<E> {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
 
-        R<?, ?> row2 = (R<?, ?>) o;
+        Row<?, ?> row2 = (Row<?, ?>) o;
 
-        return f.equals(row2.f);
+        return field.equals(row2.field);
 
     }
 
     @Override
     public int hashCode() {
         int result = super.hashCode();
-        result = 31 * result + f.hashCode();
+        result = 31 * result + field.hashCode();
         return result;
     }
 
 
     public static void main(String[] args) {
-        F<String, Class<?>> f = new F<>();
-        f.setType("id", Integer.class);
-        f.setType("good", String.class);
-        f.setType("name", String.class);
-        R<String, Object> r = new R<String, Object>(f);
+        Field<String, Class<?>> field = new Field<>();
+        field.setType("id", Integer.class);
+        field.setType("good", String.class);
+        field.setType("name", String.class);
+        Row<String, Object> row = new Row<String, Object>(field);
 
-        r.setColumn("id", 12);
-        r.setColumn("good", "yes good");
-        r.setColumn("name", "dog");
+        row.setColumn("id", 12);
+        row.setColumn("good", "yes good");
+        row.setColumn("name", "dog");
 
-        System.out.println(r);
-        r.setColumn("pass", "12345", String.class);
-        System.out.println(r);
-        System.out.println(r.getF());
-
-
-        r.setColumn("good", "nonono");
-        System.out.println(r);
-        System.out.println(r.getF());
+        System.out.println(row);
+        row.setColumn("pass", "12345", String.class);
+        System.out.println(row);
+        System.out.println(row.getField());
 
 
-        r.setColumn("good", 123, Integer.class);
-        System.out.println(r);
-        System.out.println(r.getF());
+        row.setColumn("good", "nonono");
+        System.out.println(row);
+        System.out.println(row.getField());
 
-        r.removeColumn("id");
-        System.out.println(r);
-        System.out.println(r.getF());
 
-        R<String, Object> r2 = new R<String, Object>();
-        r2.setColumn("pp", "pp", String.class);
-        r2.setColumn("good", "ppgood", String.class);
+        row.setColumn("good", 123, Integer.class);
+        System.out.println(row);
+        System.out.println(row.getField());
 
-        r.setColumn(r2);
-        System.out.println(r);
-        System.out.println(r.getF());
+        row.removeColumn("id");
+        System.out.println(row);
+        System.out.println(row.getField());
+
+        Row<String, Object> row2 = new Row<String, Object>();
+        row2.setColumn("pp", "pp", String.class);
+        row2.setColumn("good", "ppgood", String.class);
+
+        row.setColumn(row2);
+        System.out.println(row);
+        System.out.println(row.getField());
     }
 
 

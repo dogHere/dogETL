@@ -1,4 +1,4 @@
-package com.github.doghere;
+package com.github.doghere.jdbc;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,7 +18,7 @@ import java.util.Set;
  * @param <C> the type of Filed types
  * @author dogHere@tutamail.com
  */
-public class F<S, C> extends HashMap<S, C> {
+public class Field<S, C> extends HashMap<S, C> {
 
     private int position = -1;
     private Map<S, Integer> fieldNumber;
@@ -30,7 +30,7 @@ public class F<S, C> extends HashMap<S, C> {
      *
      * @param size
      */
-    public F(int size) {
+    public Field(int size) {
         super(size);
         this.fieldNumber = new HashMap<>(size);
     }
@@ -38,7 +38,7 @@ public class F<S, C> extends HashMap<S, C> {
     /**
      * Init Field with a hashMap ,default size is 8.
      */
-    public F() {
+    public Field() {
         this.fieldNumber = new HashMap<>(8);
     }
 
@@ -77,7 +77,7 @@ public class F<S, C> extends HashMap<S, C> {
      * @param type
      * @return self
      */
-    public F<S, C> setType(S fieldName, C type) {
+    public Field<S, C> setType(S fieldName, C type) {
         if (!this.containsKey(fieldName)) {
             synchronized (this) {
                 this.position++;
@@ -104,7 +104,7 @@ public class F<S, C> extends HashMap<S, C> {
      * @param field Field model
      * @return self
      */
-    public F<S, C> setType(F<S, C> field) {
+    public Field<S, C> setType(Field<S, C> field) {
         field.forEach((s, c) -> {
             this.setType(s, c);
         });
@@ -137,7 +137,7 @@ public class F<S, C> extends HashMap<S, C> {
      * @param name field name
      * @return self
      */
-    public F<S, C> removeColumn(S name) {
+    public Field<S, C> removeColumn(S name) {
         if (this.hasName(name) && this.hasNumber(name)) {
             synchronized (this) {
                 int num = this.getNumber(name);
@@ -161,7 +161,7 @@ public class F<S, C> extends HashMap<S, C> {
      * @param names field names
      * @return self
      */
-    public F<S, C> removeColumns(S... names) {
+    public Field<S, C> removeColumns(S... names) {
         for (S s : names) {
             removeColumn(s);
         }
@@ -209,19 +209,19 @@ public class F<S, C> extends HashMap<S, C> {
 
 
     /**
-     * filter will create new F
+     * filter will create new Field
      *
      * @param fs field set
-     * @return new F
+     * @return new Field
      */
-    public  F<S,C> filter(Set<S> fs){
-        F<S,C> f = new F<>();
+    public Field<S,C> filter(Set<S> fs){
+        Field<S,C> field = new Field<>();
         this.forEach((k,v)->{
             if(fs.contains(k)){
-                f.setType(k,v);
+                field.setType(k,v);
             }
         });
-        return f;
+        return field;
     }
 
     @Override
@@ -231,7 +231,7 @@ public class F<S, C> extends HashMap<S, C> {
             s.append(k + ":" + fieldNumber.get(k) + "->" + v);
             s.append(",\n");
         });
-        return "F{" + "size:" + size() + "\n" +
+        return "Field{" + "size:" + size() + "\n" +
                 s +
                 '}';
     }
@@ -243,10 +243,10 @@ public class F<S, C> extends HashMap<S, C> {
         if (o == null || getClass() != o.getClass()) return false;
         if (!super.equals(o)) return false;
 
-        F<?, ?> f = (F<?, ?>) o;
+        Field<?, ?> field = (Field<?, ?>) o;
 
-        if (position != f.position) return false;
-        return fieldNumber.equals(f.fieldNumber);
+        if (position != field.position) return false;
+        return fieldNumber.equals(field.fieldNumber);
 
     }
 
@@ -259,34 +259,34 @@ public class F<S, C> extends HashMap<S, C> {
     }
 
     public static void main(String[] args) {
-        F<String, Class<?>> f = new F<>(2);
-        f.setType("id", Integer.class);
-        f.setType("id", Integer.class);
-        f.setType("username", String.class);
-        f.setType("good", Double.class);
+        Field<String, Class<?>> field = new Field<>(2);
+        field.setType("id", Integer.class);
+        field.setType("id", Integer.class);
+        field.setType("username", String.class);
+        field.setType("good", Double.class);
 
         System.out.println(
-                f.getNumber("username")
+                field.getNumber("username")
         );
         System.out.println(
-                f.getNumber("id")
+                field.getNumber("id")
         );
 
         System.out.println(
-                f.getType("idll")
+                field.getType("idll")
         );
-        System.out.println(f);
-        f.removeColumns("id");
-        System.out.println(f);
+        System.out.println(field);
+        field.removeColumns("id");
+        System.out.println(field);
 
-        F<String, Class<?>> f2 = new F<>(3);
+        Field<String, Class<?>> field2 = new Field<>(3);
 
-        f2.setType("qq", String.class);
-        f2.setType("good", Float.class);
-        f2.setType(f);
+        field2.setType("qq", String.class);
+        field2.setType("good", Float.class);
+        field2.setType(field);
 
-        System.out.println(f2);
-        System.out.println(f2.size());
+        System.out.println(field2);
+        System.out.println(field2.size());
 
     }
 }

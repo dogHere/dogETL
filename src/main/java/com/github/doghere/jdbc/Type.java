@@ -1,4 +1,4 @@
-package com.github.doghere.util;
+package com.github.doghere.jdbc;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
