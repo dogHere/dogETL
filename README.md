@@ -1,80 +1,39 @@
+
+
+
 ## Example 
 
-**Without queue:**
-
 ```java
 
-M model = new M(from); //from:Connection
-T table = new T(1000); //init size
-model.read(
-    "select name,sum(socre) as total from test where score>10 group by name "
-,table);
+int POOL_SIZE = 4; // how many writer threads 
+DataSource dataSource = // data source 
+
+// create single reader
+Reader reader = new JDBCReader()
+                .setConnection(dataSource.getConnection())
+                .setSQL("select uid,count(distinct event_id) as pv from logs where app_id='dog_here' group by uid limit 2000000");
 
 
-T newTable  = new T(table.position());
-table.flip();//flip
-while (table.hasRemaining()){
-    R<String,Object> row = (R<String, Object>) table.get();
-    //deal with row
-    ...
-    newTable.put(row);
+// create writers
+Writer [] writers = new Writer[POOL_SIZE];
+for(int i=0;i<POOL_SIZE;i++) {
+    writers[i] = new JDBCWriter<Row>() {
+        @Override
+        public Row dealWithEach(Row row) {
+            // deal with ecah row here
+            return row;
+        }
+    }.setTarget("rpt_pv_by_uid")//target table name
+            .setConnection(dataSource.getConnection())
+            .setPrimaryKeys("uid");//target table primary keys,split with `,`
 }
 
-model.write(newTable,"result",H.make("name"),H.make(),to);//newTable:T;table name;primary key;fields;to:Connection
-
-```
-
-**With queue:**
-
-```java
-
-M model = new M();
-T table = null; //init size
-Q q = new Q();//queue
-model.read(
-    "select name,sum(socre) as total from test where score>10 group by name "
-,q,from); //from:Connection
-
-
-while ((table=q.fetch(3000,model)).size()!=0){
-    T newTable  = new T(table.position());
-    table.flip();//flip
-    while (table.hasRemaining()){
-        R<String,Object> row = (R<String, Object>) table.get();
-        //deal with row
-        ...
-        newTable.put(row);
-        
-    }
-    model.write(newTable,"result",H.make("name"),H.make(),to);//newTable:T;table name;primary key;fields;to:Connection
-}
-
-
-```
-
-
-**Deal with rows:**
-
-```java
-model.read(
-    "select id,url  from user_data "
-,table);
-
-T newTable  = new T(table.position());
-while (table.hasRemaining()){
-    R<String,Object> row = (R<String, Object>) table.get();
-
-    R<String,Object> newRow = new R<>();
-    nowRow.setColumn(row)
-            .setColumn("protocol",protocol,String.class)
-            .setColumn("path",path,String.class)
-            .setColumn("host",host,String.class)
-            .setColumn("query",query,String.class)
-            .setColumn("ref",ref,String.class)
-            .removeColumn("url");
-    newTable.put(row);
-}
-model.write(newTable,"result",H.make("id"),H.make("id","protocol","path","host","query","ref"),to);//newTable:T;table name;primary key;fields;to:Connection
+new Model() //new model
+        .setReader(reader) //set reader
+        .setWriter(writers) //set writers
+        .setFactory(new RowFactory()) //set row factory to create row instances
+        .setRingBufferSize((int) Math.pow(2,12)) //set ring buffer size
+        .start(); 
 ```
 ## License 
 
