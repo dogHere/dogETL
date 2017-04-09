@@ -17,9 +17,8 @@ Reader reader = new JDBCReader()
 
 Writer [] writers = new JDBCWriter<Row>() {
         @Override
-        public Row dealWithEach(Row row) {
+        public void dealWithEach(Row row) {
             // deal with ecah row here
-            return row;
         }
     }.setTarget("rpt_pv_by_uid")//target table name
         .setPrimaryKeys("uid")//target table primary keys,split with `,`

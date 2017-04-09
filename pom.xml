@@ -6,7 +6,7 @@
 
     <groupId>com.github.doghere</groupId>
     <artifactId>jdbc-cache</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.2</version>
     <build>
         <plugins>
             <plugin>
@@ -22,7 +22,6 @@
 
 
     <dependencies>
-
 
 
         <!-- https://mvnrepository.com/artifact/com.lmax/disruptor -->

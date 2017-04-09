@@ -12,6 +12,11 @@ import java.util.ArrayList;
  *         <br><br>
  */
 public class Row<S, E> extends ArrayList<E> {
+
+
+    private boolean canWrite = true;
+    private boolean canRead  = true;
+
     private Field<S, Class<?>> field;
     private Object lock = new Object();
 
@@ -269,6 +274,24 @@ public class Row<S, E> extends ArrayList<E> {
         return result;
     }
 
+
+    public boolean isCanWrite() {
+        return canWrite;
+    }
+
+    public Row setCanWrite(boolean canWrite) {
+        this.canWrite = canWrite;
+        return this;
+    }
+
+    public boolean isCanRead() {
+        return canRead;
+    }
+
+    public Row setCanRead(boolean canRead) {
+        this.canRead = canRead;
+        return this;
+    }
 
     public static void main(String[] args) {
         Field<String, Class<?>> field = new Field<>();

@@ -2,6 +2,7 @@ package com.github.doghere.jdbc;
 
 import com.github.doghere.Each;
 import com.github.doghere.Writer;
+import com.lmax.disruptor.dsl.Disruptor;
 
 import javax.sql.DataSource;
 import java.math.BigDecimal;
@@ -13,7 +14,7 @@ import java.util.*;
 /**
  * Created by dog on 4/6/17.
  */
-abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
+abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
 
 
     private DataSource dataSource;
@@ -32,6 +33,8 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
     private Sql insert;
     private Sql update;
 
+    private Disruptor<Row> disruptor;
+
     public JDBCWriter(){}
 
 
@@ -39,7 +42,7 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
         return null;
     }
 
-    public JDBCWriter<E> setConnection(Connection connection) {
+    public JDBCWriter setConnection(Connection connection) {
         this.connection = connection;
         return this;
     }
@@ -64,8 +67,8 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
         update = buildUpdate(target, primaryKeys, newColumnNames);
 
         if (!select.isEmpty()) {
-
-            selectStatement = connection.prepareStatement(select.getSql());
+            String insertStr = select.getSql();
+            selectStatement = connection.prepareStatement(insertStr);
             insertStatement = connection.prepareStatement(insert.getSql());
             if (!update.isEmpty()) {
                 updateStatement = connection.prepareStatement(update.getSql());
@@ -79,16 +82,10 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
 
 
     @Override
-    public void onEvent(E r) throws Exception {
-        //deal with o
-
-//        if(l%10000==0) {
-//            connection.commit();
-//            System.out.println(l);
-//        }
-        r = dealWithEach(r);
-        Field field = ((Row)r).getField();
-        Row row = (Row)r;
+    public void onEvent(Row row) throws Exception {
+        if(!row.isCanWrite()) return;
+        dealEach(row);
+        Field field = row.getField();
         if (newColumnNames == null) {
             newColumnNames = columnNames.size() == 0 ? field.keySet() : columnNames;
             createStatement(newColumnNames);
@@ -118,9 +115,18 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
             }
         }catch (Exception e){
             e.printStackTrace();
+            System.out.println(e);
             connection.rollback();
             connection.close();
+
+            System.exit(-1);//emergency exit
+//            disruptor.shutdown(3, TimeUnit.SECONDS);
+
+            throw new Exception(e);
+        }finally {
+            if(!row.isCanRead()) row.setCanRead(true);
         }
+
     }
 
 
@@ -507,7 +513,7 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
         return this;
     }
 
-    abstract public E dealWithEach(E e);
+    abstract public void dealEach(Row e)throws Exception;
 
 
     public DataSource getDataSource() {
@@ -528,9 +534,9 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
         return this;
     }
 
-    public  Writer<E>[] create() throws SQLException, CloneNotSupportedException {
+    public  Writer[] create() throws SQLException, CloneNotSupportedException {
         if(dataSource==null) throw new  RuntimeException("dataSource can not be null !");
-        Writer<E> [] writers = new Writer[writerSize];
+        Writer [] writers = new Writer[writerSize];
         for(int i=0;i<writerSize;i++) {
             writers[i] = this.clone().setConnection(dataSource.getConnection());
         }
@@ -538,7 +544,12 @@ abstract public class JDBCWriter<E> implements Writer<E>,Each<E>,Cloneable{
     }
 
     @Override
-    public JDBCWriter<E> clone() throws CloneNotSupportedException {
-        return (JDBCWriter<E>)super.clone();
+    public JDBCWriter clone() throws CloneNotSupportedException {
+        return (JDBCWriter)super.clone();
+    }
+
+    @Override
+    public void setDisruptor(Disruptor<Row> disruptor) {
+        this.disruptor = disruptor;
     }
 }

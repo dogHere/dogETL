@@ -130,10 +130,11 @@ public class JDBCReader implements Reader {
     }
 
     @Override
-    public void read() throws SQLException {
+    public void read() throws Exception {
         long sequence = ringBuffer.next();  // Grab the next sequence
         try {
             Row row = ringBuffer.get(sequence); // Get the entry in the Disruptor
+            if(!row.isCanWrite()) row.setCanWrite(true);
             if(row.getField()==null) {
                 row.setField((Field)field.clone());
             }
@@ -141,6 +142,9 @@ public class JDBCReader implements Reader {
             if(!setRow(row, field)){
                 hasRemaining=false;
             }
+        }catch (Exception e){
+            e.printStackTrace();
+            throw new Exception(e);
         } finally {
             if(hasRemaining) ringBuffer.publish(sequence);
         }
@@ -162,6 +166,7 @@ public class JDBCReader implements Reader {
 
         rs.close();
         statement.close();
+        connection.close();
     }
 
     public Statement getStatement() {

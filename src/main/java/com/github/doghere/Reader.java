@@ -9,7 +9,7 @@ import java.sql.SQLException;
  */
 public interface Reader<E> extends Ready{
 
-    public void read() throws SQLException;
+    public void read() throws Exception;
     public void setRingBuffer(RingBuffer ringBuffer);
     public boolean hasRemaining();
 
