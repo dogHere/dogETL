@@ -15,9 +15,9 @@ Reader reader = new JDBCReader()
 
 // create writers
 
-Writer [] writers = new JDBCWriter<Row>() {
+Writer [] writers = new JDBCWriter() {
         @Override
-        public void dealWithEach(Row row) {
+        public void dealEach(Row row) {
             // deal with ecah row here
         }
     }.setTarget("rpt_pv_by_uid")//target table name
