@@ -67,7 +67,7 @@ final public class Model<E> {
                     ringBufferSize,
                     executor,
                     ProducerType.SINGLE,
-                    new BlockingWaitStrategy());
+                    new YieldingWaitStrategy());
             disruptor.handleEventsWithWorkerPool(writer);
             disruptor.start();
 
