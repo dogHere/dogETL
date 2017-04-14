@@ -3,37 +3,81 @@
 
 ## Example 
 
+### Start a job
+
+```java
+Model model = new Model() 
+        .setReader(reader)  
+        .setWriter(writers) 
+
+model.start(); 
+
+//todo : to support multiple readers
+```
+
+### Reader
+
 ```java
 
-
-// create single reader
+//jdbc reader
 
 Reader reader = new JDBCReader()
-                .setConnection(dataSource.getConnection())
-                .setSQL("select uid,count(distinct event_id) as pv from logs where app_id='dog_here' group by uid limit 2000000");
+                .setConnection(connection) // jdbc connection
+                .setSQL("select uid,count(*) as pv from logs group by uid"); // any sql
 
+// or csv reader
 
-// create writers
+Reader reader = new CSVReader()
+        .setIoReader(new FileReader(new File("~/logs.csv")))
+        .setField(new Field()
+            .setType("uid",Integer.class)
+            .setType("eid",String.class)
+            .setType("create_date",Timestamp.class)
+        );
+        
+// or any reader 
+
+// todo : to support more reader .
+```
+
+### Writer
+
+```java
+
+// jdbc multi-writer
 
 Writer [] writers = new JDBCWriter() {
         @Override
-        public void dealEach(Row row) {
-            // deal with ecah row here
+        public void dealEach(Row row)throws Exception {
+            // map row here
         }
-    }.setTarget("rpt_pv_by_uid")//target table name
-        .setPrimaryKeys("uid")//target table primary keys,split with `,`
+    }
+        .setTarget("rpt_pv")
+        .setPrimaryKeys("uid")
         .setWriterSize(POOL_SIZE)
         .setDataSource(dataSource)
         .create();
 
-// transform
+//csv writer
 
-new Model() //new model
-        .setReader(reader) 
-        .setWriter(writers) 
-        .setFactory(new RowFactory()) //set row factory to create row instances
-        .start(); 
+
+Writer[] writers = new Writer[]{
+        new CSVWriter() {
+            @Override
+            public void dealEach(Row row) throws Exception {
+                // map row here
+            }
+        }.setIoWriter(new FileWriter(new File("~/rpt_pv.csv")))
+};
+
+
+
+// or any reader 
+
+// todo : to support more reader .
+
 ```
+
 ## License 
 
 ```

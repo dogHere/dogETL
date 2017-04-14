@@ -6,7 +6,7 @@
 
     <groupId>com.github.doghere</groupId>
     <artifactId>jdbc-cache</artifactId>
-    <version>0.1.3</version>
+    <version>0.1.4</version>
     <build>
         <plugins>
             <plugin>
@@ -87,13 +87,19 @@
             <!--<artifactId>disruptor</artifactId>-->
             <!--<version>3.2.0</version>-->
         <!--</dependency>-->
-
-
-        <!-- https://mvnrepository.com/artifact/com.lmax/disruptor -->
+<!---->
+<!---->
+         <!--https://mvnrepository.com/artifact/com.lmax/disruptor-->
         <dependency>
             <groupId>com.lmax</groupId>
             <artifactId>disruptor</artifactId>
             <version>3.3.4</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.3</version>
+        </dependency>
+
     </dependencies>
 </project>

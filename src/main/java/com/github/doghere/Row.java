@@ -1,4 +1,4 @@
-package com.github.doghere.jdbc;
+package com.github.doghere;
 
 import java.util.ArrayList;
 
@@ -11,11 +11,12 @@ import java.util.ArrayList;
  *         This is the Row model of Db.
  *         <br><br>
  */
-public class Row<S, E> extends ArrayList<E> {
+public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
 
 
     private boolean canWrite = true;
     private boolean canRead  = true;
+    private boolean useStrict  = true;
 
     private Field<S, Class<?>> field;
     private Object lock = new Object();
@@ -109,6 +110,10 @@ public class Row<S, E> extends ArrayList<E> {
     public Row<S, E> setColumn(S fieldName, E e) {
 
         if (this.field.containsKey(fieldName)) {
+            if(!useStrict) {
+                this.set(this.field.getNumber(fieldName), e);
+                return this;
+            }
             synchronized (this) {
                 if (e == null) {
                     this.set(this.field.getNumber(fieldName), e);
@@ -119,6 +124,11 @@ public class Row<S, E> extends ArrayList<E> {
             }
         } else
             throw new RuntimeException("field name `" + fieldName + "` not found!");
+        return this;
+    }
+
+    public Row<S,E> setUseStrict(boolean useStrict){
+        this.useStrict = useStrict;
         return this;
     }
 
@@ -333,4 +343,23 @@ public class Row<S, E> extends ArrayList<E> {
     }
 
 
+    @Override
+    public Row<S, E> setStrict(boolean isStrict) {
+        this.useStrict = isStrict;
+        return this;
+    }
+
+
+    public String[] toStringArray(){
+        String [] arr = new String[size()];
+        int[]i=new int[]{0};
+        this.forEach(k->{
+            if(k==null)
+                arr[i[0]] = null;
+            else
+                arr[i[0]] = k.toString();
+            i[0]+=1;
+        });
+        return arr;
+    }
 }

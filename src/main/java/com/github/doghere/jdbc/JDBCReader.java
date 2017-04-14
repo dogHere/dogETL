@@ -1,6 +1,8 @@
 package com.github.doghere.jdbc;
 
+import com.github.doghere.Field;
 import com.github.doghere.Reader;
+import com.github.doghere.Row;
 import com.lmax.disruptor.RingBuffer;
 
 import java.math.BigDecimal;
@@ -50,7 +52,7 @@ public class JDBCReader implements Reader {
         for (int i = 1; i <= size; i++) {
             String fieldName = metaData.getColumnLabel(i);
             int tN = metaData.getColumnType(i);
-            Class c = Type.dbJava.get(tN);
+            Class c = JDBCType.dbJava.get(tN);
             field.setType(fieldName, c);
         }
         return field;
@@ -188,6 +190,7 @@ public class JDBCReader implements Reader {
     }
 
 
+    @Override
     public JDBCReader setField(Field field) {
         this.field = field;
         return this;

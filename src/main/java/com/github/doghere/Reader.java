@@ -12,5 +12,6 @@ public interface Reader<E> extends Ready{
     public void read() throws Exception;
     public void setRingBuffer(RingBuffer ringBuffer);
     public boolean hasRemaining();
+    public Reader<E> setField(Field field);
 
 }

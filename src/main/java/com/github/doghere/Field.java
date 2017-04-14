@@ -1,15 +1,13 @@
-package com.github.doghere.jdbc;
+package com.github.doghere;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Created by dog on 12/14/16.
  * <p>
  * This is the Field model of Db field.
  * <p>
- * The Field has two value,one is the field'Type the other is the field's number.<br>
+ * The Field has two value,one is the field'JDBCType the other is the field's number.<br>
  * <br>
  * The Field model extends HashMap.The key is the field's name,the value is the field type. <br>
  * The Field model has a field number mapper.The key is the field's name,the value is the field's number.
@@ -18,7 +16,7 @@ import java.util.Set;
  * @param <C> the type of Filed types
  * @author dogHere@tutamail.com
  */
-public class Field<S, C> extends HashMap<S, C> {
+public class Field<S, C> extends LinkedHashMap<S, C> {
 
     private int position = -1;
     private Map<S, Integer> fieldNumber;
@@ -256,6 +254,19 @@ public class Field<S, C> extends HashMap<S, C> {
         result = 31 * result + position;
         result = 31 * result + fieldNumber.hashCode();
         return result;
+    }
+
+    public String[] toStringArray(){
+        String [] arr = new String[size()];
+        int[]i=new int[]{0};
+        keySet().forEach(k->{
+            if(k==null)
+                arr[i[0]] = null;
+            else
+                arr[i[0]] = k.toString();
+            i[0]+=1;
+        });
+        return arr;
     }
 
     public static void main(String[] args) {

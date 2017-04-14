@@ -15,7 +15,7 @@ import java.util.HashMap;
  */
 
 
-public class Type {
+final public class JDBCType {
 
 
     public static HashMap<Integer, Class> dbJava;

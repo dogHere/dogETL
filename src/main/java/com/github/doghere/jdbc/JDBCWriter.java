@@ -1,7 +1,6 @@
 package com.github.doghere.jdbc;
 
-import com.github.doghere.Each;
-import com.github.doghere.Writer;
+import com.github.doghere.*;
 import com.lmax.disruptor.dsl.Disruptor;
 
 import javax.sql.DataSource;
@@ -14,7 +13,7 @@ import java.util.*;
 /**
  * Created by dog on 4/6/17.
  */
-abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
+abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Strict,Multiple{
 
 
     private DataSource dataSource;
@@ -32,6 +31,8 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
     private Sql select ;
     private Sql insert;
     private Sql update;
+
+    private boolean strict = true;
 
     private Disruptor<Row> disruptor;
 
@@ -83,24 +84,24 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
 
     @Override
     public void onEvent(Row row) throws Exception {
-        if(!row.isCanWrite()) return;
-        dealEach(row);
-        Field field = row.getField();
-        if (newColumnNames == null) {
-            newColumnNames = columnNames.size() == 0 ? field.keySet() : columnNames;
-            createStatement(newColumnNames);
-        }
+        try {
+            if(!row.isCanWrite()) return;
+            dealEach(row);
+            Field field = row.getField();
+            if (newColumnNames == null) {
+                newColumnNames = columnNames.size() == 0 ? field.keySet() : columnNames;
+                createStatement(newColumnNames);
+            }
 
 
-        //select.
-        int isThere = 0;
-        if(!select.isEmpty) {
-            isThere = execSelect(selectStatement, row, select, field);
-//            System.out.println(selectStatement+"\tselect result: "+isThere);
-        }
+            //select.
+            int isThere = 0;
+            if(!select.isEmpty) {
+                isThere = execSelect(selectStatement, row, select, field);
+    //            System.out.println(selectStatement+"\tselect result: "+isThere);
+            }
 
         //insert or update
-        try {
             if (isThere == 0) {
                 setInsert(insertStatement, row, insert,field);
 //                System.out.println(insertStatement);
@@ -118,7 +119,6 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
             System.out.println(e);
             connection.rollback();
             connection.close();
-
             System.exit(-1);//emergency exit
 //            disruptor.shutdown(3, TimeUnit.SECONDS);
 
@@ -308,6 +308,11 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
      */
     private void setValue(Class<?> c, int col, String fieldName, Row<String, Comparable> row, PreparedStatement statement) throws SQLException {
         Object value = row.getColumn(fieldName);
+        if(this.strict) {
+            statement.setObject(col,value);
+            return;
+        }
+
         if (c.equals(String.class)) {
             String v = value == null ? null : (String) value;
 
@@ -534,6 +539,7 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
         return this;
     }
 
+    @Override
     public  Writer[] create() throws SQLException, CloneNotSupportedException {
         if(dataSource==null) throw new  RuntimeException("dataSource can not be null !");
         Writer [] writers = new Writer[writerSize];
@@ -551,5 +557,11 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable{
     @Override
     public void setDisruptor(Disruptor<Row> disruptor) {
         this.disruptor = disruptor;
+    }
+
+    @Override
+    public JDBCWriter setStrict(boolean strict){
+        this.strict = strict;
+        return this;
     }
 }

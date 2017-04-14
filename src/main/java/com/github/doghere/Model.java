@@ -12,13 +12,13 @@ import java.util.concurrent.TimeUnit;
 /**
  * Created by dog on 4/6/17.
  */
-final public class Model<E> {
+final public class Model<E> implements Ready {
     
     private Reader<E> reader ;
     private Writer<E> []writer;
     private Factory<E> factory;
     private int ringBufferSize=2^10;
-    private    Disruptor<E> disruptor ;
+    private Disruptor<E> disruptor ;
 
     public Factory<E> getFactory() {
         return factory;
@@ -57,12 +57,14 @@ final public class Model<E> {
     public void start() throws Exception {
 
         try {
+            before();
             long startTime = System.currentTimeMillis();
             reader.before();
             for (Writer w : writer) {
                 w.before();
             }
             Executor executor = Executors.newCachedThreadPool();
+//            disruptor = new Disruptor<E>(getFactory(),ringBufferSize,)
             disruptor = new Disruptor<E>(getFactory(),
                     ringBufferSize,
                     executor,
@@ -96,7 +98,7 @@ final public class Model<E> {
             throw new Exception(e);
         }finally {
             System.out.println("finally");
-            if(disruptor!=null) disruptor.shutdown(10,TimeUnit.SECONDS);
+            if(disruptor!=null) disruptor.shutdown(20,TimeUnit.MINUTES);
             reader.after();
             for (Writer w : writer) w.after();
         }
@@ -105,4 +107,13 @@ final public class Model<E> {
     }
 
 
+    @Override
+    public void before() throws Exception {
+        if(this.factory==null) setFactory((Factory<E>) new RowFactory());
+    }
+
+    @Override
+    public void after() throws Exception {
+
+    }
 }
