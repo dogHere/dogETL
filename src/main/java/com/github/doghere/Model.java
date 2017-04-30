@@ -86,7 +86,7 @@ final public class Model<E> implements Ready {
             long count = 0;
             for (long l = 0; reader.hasRemaining(); l++) {
                 reader.read();
-                if (l % 3000 == 0) {
+                if (l % 1 == 0) {
                     System.out.println("read rows:\t" + l + "\tcost " + (System.currentTimeMillis() - startTime));
                 }
                 count = l;
@@ -98,7 +98,7 @@ final public class Model<E> implements Ready {
             throw new Exception(e);
         }finally {
             System.out.println("finally");
-            if(disruptor!=null) disruptor.shutdown(20,TimeUnit.MINUTES);
+            if(disruptor!=null) disruptor.shutdown(60,TimeUnit.MINUTES);
             reader.after();
             for (Writer w : writer) w.after();
         }

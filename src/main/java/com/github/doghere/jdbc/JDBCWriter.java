@@ -32,6 +32,10 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Stri
     private Sql insert;
     private Sql update;
 
+    private boolean important = true;
+
+    private boolean commit =false;
+
     private boolean strict = true;
 
     private Disruptor<Row> disruptor;
@@ -85,8 +89,8 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Stri
     @Override
     public void onEvent(Row row) throws Exception {
         try {
-            if(!row.isCanWrite()) return;
             dealEach(row);
+            if(!row.isCanWrite()) return;
             Field field = row.getField();
             if (newColumnNames == null) {
                 newColumnNames = columnNames.size() == 0 ? field.keySet() : columnNames;
@@ -116,14 +120,17 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Stri
             }
         }catch (Exception e){
             e.printStackTrace();
-            System.out.println(e);
-            connection.rollback();
-            connection.close();
-            System.exit(-1);//emergency exit
+            System.err.println(row);
+            if(important) {
+                connection.rollback();
+                connection.close();
+                Thread.sleep(1000);
+                System.exit(-1);//emergency exit
 //            disruptor.shutdown(3, TimeUnit.SECONDS);
+            }
 
-            throw new Exception(e);
         }finally {
+            if(isCommit()) commit();
             if(!row.isCanRead()) row.setCanRead(true);
         }
 
@@ -562,6 +569,35 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Stri
     @Override
     public JDBCWriter setStrict(boolean strict){
         this.strict = strict;
+        return this;
+    }
+
+
+    public boolean isCommit() {
+        return commit;
+    }
+
+    public JDBCWriter setCommit(boolean commit) {
+        this.commit = commit;
+        return this;
+    }
+
+    public void commit() throws SQLException {
+        this.connection.commit();
+    }
+
+    public boolean isImportant() {
+        return important;
+    }
+
+    /**
+     * The process will exit(-1) when error occurs if it is important.
+     *
+     * @param important
+     * @return self
+     */
+    public JDBCWriter setImportant(boolean important) {
+        this.important = important;
         return this;
     }
 }

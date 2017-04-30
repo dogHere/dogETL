@@ -21,6 +21,8 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
     private Field<S, Class<?>> field;
     private Object lock = new Object();
 
+    private String tableName ;
+
     /**
 //     * Init a Row default with a Field
      */
@@ -361,5 +363,14 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
             i[0]+=1;
         });
         return arr;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public Row setTableName(String tableName) {
+        this.tableName = tableName;
+        return this;
     }
 }
