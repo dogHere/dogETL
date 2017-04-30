@@ -7,6 +7,7 @@ import com.lmax.disruptor.dsl.Disruptor;
 
 /**
  * Created by dog on 4/17/17.
+ * //// TODO: 4/30/17 json writer 
  */
 public class JSONWriter implements Writer<Row>,Each<Row> {
     @Override

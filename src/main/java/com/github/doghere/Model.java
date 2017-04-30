@@ -16,6 +16,7 @@ final public class Model<E> implements Ready {
     
     private Reader<E> reader ;
     private Writer<E> []writer;
+    private Transformer<E> transformer;
     private Factory<E> factory;
     private int ringBufferSize=2^10;
     private Disruptor<E> disruptor ;
@@ -45,6 +46,11 @@ final public class Model<E> implements Ready {
         return this;
     }
 
+    public Model setTransformer(Transformer<E> transformer){
+        this.transformer = transformer;
+        return this;
+    }
+
     public Disruptor<E> getDisruptor() {
         return disruptor;
     }
@@ -70,7 +76,15 @@ final public class Model<E> implements Ready {
                     executor,
                     ProducerType.SINGLE,
                     new YieldingWaitStrategy());
-            disruptor.handleEventsWithWorkerPool(writer);
+            if(transformer==null){
+                transformer = new Transformer<E>() {
+                    @Override
+                    public void onEvent(E event, long sequence, boolean endOfBatch) throws Exception {
+
+                    }
+                };
+            }
+            disruptor.handleEventsWith(transformer).handleEventsWithWorkerPool(writer);
             disruptor.start();
 
 

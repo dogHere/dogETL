@@ -13,7 +13,7 @@ import java.util.*;
 /**
  * Created by dog on 4/6/17.
  */
-abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Strict,Multiple{
+public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Strict,Multiple{
 
 
     private DataSource dataSource;
@@ -525,7 +525,7 @@ abstract public class JDBCWriter implements Writer<Row>,Each<Row>,Cloneable,Stri
         return this;
     }
 
-    abstract public void dealEach(Row e)throws Exception;
+    public void dealEach(Row e)throws Exception{}
 
 
     public DataSource getDataSource() {

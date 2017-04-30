@@ -6,7 +6,7 @@
 
     <groupId>com.github.doghere</groupId>
     <artifactId>jdbc-cache</artifactId>
-    <version>0.1.4.2</version>
+    <version>0.1.5.0</version>
     <build>
         <plugins>
             <plugin>

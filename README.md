@@ -7,13 +7,13 @@
 
 ```java
 Model model = new Model() 
-        .setReader(reader)  
+        .setReader(reader)
+        .setTransformer(transformer)
         .setWriter(writers) 
 
 model.start(); 
-
-//todo : to support multiple readers
 ```
+
 
 ### Reader
 
@@ -25,20 +25,20 @@ Reader reader = new JDBCReader()
                 .setConnection(connection) // jdbc connection
                 .setSQL("select uid,count(*) as pv from logs group by uid"); // any sql
 
-// or csv reader
-
-Reader reader = new CSVReader()
-        .setIoReader(new FileReader(new File("~/logs.csv")))
-        .setField(new Field()
-            .setType("uid",Integer.class)
-            .setType("eid",String.class)
-            .setType("create_date",Timestamp.class)
-        );
-        
-// or any reader 
-
-// todo : to support more reader .
 ```
+Support readers : jdbc,csv,json
+
+### Transformer
+
+```java
+Transformer transformer = new Transformer<Row>() {
+    @Override
+    public void onEvent(Row event, long sequence, boolean endOfBatch) throws Exception {
+        //deal each row here
+    }
+};
+```
+
 
 ### Writer
 
@@ -46,37 +46,16 @@ Reader reader = new CSVReader()
 
 // jdbc multi-writer
 
-Writer [] writers = new JDBCWriter() {
-        @Override
-        public void dealEach(Row row)throws Exception {
-            // map row here
-        }
-    }
+Writer [] writers = new JDBCWriter()
         .setTarget("rpt_pv")
         .setPrimaryKeys("uid")
         .setWriterSize(POOL_SIZE)
         .setDataSource(dataSource)
         .create();
 
-//csv writer
-
-
-Writer[] writers = new Writer[]{
-        new CSVWriter() {
-            @Override
-            public void dealEach(Row row) throws Exception {
-                // map row here
-            }
-        }.setIoWriter(new FileWriter(new File("~/rpt_pv.csv")))
-};
-
-
-
-// or any reader 
-
-// todo : to support more reader .
-
 ```
+
+Support writers : jdbc,csv
 
 ## License 
 
