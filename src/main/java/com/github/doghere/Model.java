@@ -20,6 +20,7 @@ final public class Model<E> implements Ready {
     private Factory<E> factory;
     private int ringBufferSize=2^10;
     private Disruptor<E> disruptor ;
+    private int printInterval = 1000;
 
     public Factory<E> getFactory() {
         return factory;
@@ -66,6 +67,8 @@ final public class Model<E> implements Ready {
             before();
             long startTime = System.currentTimeMillis();
             reader.before();
+
+            if(writer==null )writer=new Writer[]{};
             for (Writer w : writer) {
                 w.before();
             }
@@ -84,7 +87,10 @@ final public class Model<E> implements Ready {
                     }
                 };
             }
-            disruptor.handleEventsWith(transformer).handleEventsWithWorkerPool(writer);
+            disruptor.handleEventsWith(transformer);
+            if(writer.length!=0) {
+                disruptor.handleEventsWithWorkerPool(writer);
+            }
             disruptor.start();
 
 
@@ -100,7 +106,7 @@ final public class Model<E> implements Ready {
             long count = 0;
             for (long l = 0; reader.hasRemaining(); l++) {
                 reader.read();
-                if (l % 1 == 0) {
+                if (l % printInterval == 0) {
                     System.out.println("read rows:\t" + l + "\tcost " + (System.currentTimeMillis() - startTime));
                 }
                 count = l;
@@ -129,5 +135,10 @@ final public class Model<E> implements Ready {
     @Override
     public void after() throws Exception {
 
+    }
+
+    public Model setPrintInterval(int printInterval) {
+        this.printInterval = printInterval;
+        return this;
     }
 }

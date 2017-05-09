@@ -17,6 +17,7 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
     private boolean canWrite = true;
     private boolean canRead  = true;
     private boolean useStrict  = true;
+    private boolean isBlank = false;
 
     private Field<S, Class<?>> field;
     private Object lock = new Object();
@@ -147,6 +148,7 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
      */
     public Row<S, E> setColumn(S fieldName, E e, Class<?> c) {
         synchronized (lock) {
+            if(this.field==null) this.field = new Field<>();
             if (!this.field.hasName(fieldName)) {
                 this.add(null);
             }
@@ -191,6 +193,7 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
      */
     public Row<S, E> setColumn(Row<S, E> row) {
         if(this.field==null) this.setField( row.field);
+        if(!this.field.equals(row.field)) this.field = row.field;
         row.field.keySet().forEach(name -> {
             this.setColumn(name, row.getColumn(name), row.field.getType(name));
         });
@@ -371,6 +374,19 @@ public class Row<S, E> extends ArrayList<E> implements Strict,CanRead,CanWrite{
 
     public Row setTableName(String tableName) {
         this.tableName = tableName;
+        return this;
+    }
+
+    /**
+     * It is a tag to determine hasRemaining
+     * @return
+     */
+    public boolean isBlank() {
+        return isBlank;
+    }
+
+    public Row setBlank(boolean blank) {
+        isBlank = blank;
         return this;
     }
 }
